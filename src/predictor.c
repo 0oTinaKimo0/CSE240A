@@ -33,10 +33,12 @@ int verbose;
 //      Predictor Data Structures     //
 //------------------------------------//
 
-//
-//TODO: Add your own Branch Predictor data structures here
-//
-
+// global
+uint32_t gsize;
+uint32_t lsb;
+// gshare
+uint32_t ghr;
+uint8_t *pht;
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -47,18 +49,24 @@ int verbose;
 void
 init_predictor()
 {
-  //
-  //TODO: Initialize Branch Predictor Data Structures
-  //
+  gsize = 1 << ghistoryBits;
+  lsb = gsize - 1;
+  
+  switch (bpType) {
+    case GSHARE:
+      return init_gshare();
+    case TOURNAMENT:
+    case CUSTOM:
+    default:
+      break;
+  }
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
 // Returning TAKEN indicates a prediction of taken; returning NOTTAKEN
 // indicates a prediction of not taken
 //
-uint8_t
-make_prediction(uint32_t pc)
-{
+uint8_t make_prediction(uint32_t pc) {
   //
   //TODO: Implement prediction scheme
   //
@@ -68,6 +76,7 @@ make_prediction(uint32_t pc)
     case STATIC:
       return TAKEN;
     case GSHARE:
+      return pred_gshare(pc);
     case TOURNAMENT:
     case CUSTOM:
     default:
@@ -82,10 +91,40 @@ make_prediction(uint32_t pc)
 // outcome 'outcome' (true indicates that the branch was taken, false
 // indicates that the branch was not taken)
 //
-void
-train_predictor(uint32_t pc, uint8_t outcome)
-{
-  //
-  //TODO: Implement Predictor training
-  //
+void train_predictor(uint32_t pc, uint8_t outcome) {
+  switch (bpType) {
+    case GSHARE:
+      return train_gshare(pc, outcome);
+    case TOURNAMENT:
+    case CUSTOM:
+    default:
+      break;
+  }
+}
+
+// Helper functions to be called for each type of predictor
+void init_gshare() {
+  ghr = 0;
+  pht = (uint8_t *) malloc(sizeof(uint8_t) * gsize);
+  memset(pht, 1, gsize); // all entries in the pht are initialized to 01 (WN)
+}
+
+void pred_gshare(uint32_t pc) {
+  uint32_t index = (ghr ^ pc) & lsb; // global history register is xored with the PC to index into pht
+  return predict(pht[index]);
+}
+
+void train_gshare(uint32_t pc, uint8_t outcome) {
+  ghr = (ghr << 1 | outcome) & lsb;
+  uint32_t index = (ghr ^ pc) & lsb;
+  
+}
+
+uint8_t predict(uint8_t currP) {
+  uint8_t tn = COUNTER - 1;
+  if (currP >> tn) {
+    return TAKEN;
+  } else {
+    return NOTTAKEN;
+  }
 }
