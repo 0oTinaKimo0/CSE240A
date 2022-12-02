@@ -111,20 +111,18 @@ void init_gshare() {
 
 void pred_gshare(uint32_t pc) {
   uint32_t index = (ghr ^ pc) & lsb; // global history register is xored with the PC to index into pht
-  return predict(pht[index]);
+  return pht[index] >> 1;
 }
 
 void train_gshare(uint32_t pc, uint8_t outcome) {
-  ghr = (ghr << 1 | outcome) & lsb;
+  ghr = (ghr << 1 | outcome) & lsb; // update global history register to be the new outcome 
   uint32_t index = (ghr ^ pc) & lsb;
-  
-}
-
-uint8_t predict(uint8_t currP) {
-  uint8_t tn = COUNTER - 1;
-  if (currP >> tn) {
-    return TAKEN;
+  uint8_t currP = pht[index];
+  if (outcome) {
+    if (currP != 3)
+      pht[index] += 1;
   } else {
-    return NOTTAKEN;
+    if (currP != 0)
+      pht[index] -= 1;
   }
 }
