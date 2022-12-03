@@ -38,14 +38,15 @@ uint32_t gsize;
 uint32_t lsb;
 // gshare
 uint32_t ghr;
-uint8_t *pht;
+uint8_t* pht;
 // tournament
 uint32_t* lhr;            // local history register
 uint32_t lhrSize;       // size of local history register
 uint32_t* lpht;            // local pattern history table
 uint32_t lphtSize;      // size of local pattern history table
 uint32_t* cpht;          // choice pattern history table
-
+// custom - yeh-patt
+uint8_t* ypht;
 //------------------------------------//
 //        Predictor Functions         //
 //------------------------------------//
