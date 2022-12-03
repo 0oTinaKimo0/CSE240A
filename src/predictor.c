@@ -46,16 +46,23 @@ uint32_t* lpht;            // local pattern history table
 uint32_t lphtSize;      // size of local pattern history table
 uint32_t* cpht;          // choice pattern history table
 // custom - yeh-patt
-uint8_t* ypht;
+// uint8_t* ypht;
+
+// void init_gshare();
+// uint8_t pred_gshare(uint32_t pc);
+// void train_gshare(uint32_t pc, uint8_t outcome);
+
+// void init_tournament();
+// uint8_t pred_tournament(uint32_t pc);
+// void train_tournament(uint32_t pc, uint8_t outcome);
+
 //------------------------------------//
 //        Predictor Functions         //
 //------------------------------------//
 
 // Initialize the predictor
 //
-void
-init_predictor()
-{
+void init_predictor() {
   gsize = 1 << ghistoryBits;
   lsb = gsize - 1;
   
@@ -64,7 +71,7 @@ init_predictor()
       return init_gshare();
     case TOURNAMENT:
       return init_tournament();
-    case CUSTOM:
+    //case CUSTOM:
     default:
       break;
   }
@@ -75,10 +82,6 @@ init_predictor()
 // indicates a prediction of not taken
 //
 uint8_t make_prediction(uint32_t pc) {
-  //
-  //TODO: Implement prediction scheme
-  //
-
   // Make a prediction based on the bpType
   switch (bpType) {
     case STATIC:
@@ -87,7 +90,7 @@ uint8_t make_prediction(uint32_t pc) {
       return pred_gshare(pc);
     case TOURNAMENT:
       return pred_tournament(pc);
-    case CUSTOM:
+    //case CUSTOM:
     default:
       break;
   }
@@ -106,7 +109,7 @@ void train_predictor(uint32_t pc, uint8_t outcome) {
       return train_gshare(pc, outcome);
     case TOURNAMENT:
         return train_tournament(pc, outcome);
-    case CUSTOM:
+    //case CUSTOM:
     default:
       break;
   }
@@ -120,7 +123,7 @@ void init_gshare() {
   memset(pht, 1, gsize); // all entries in the pht are initialized to 01 (WN)
 }
 
-void pred_gshare(uint32_t pc) {
+uint8_t pred_gshare(uint32_t pc) {
   uint32_t index = (ghr ^ pc) & lsb; // global history register is xored with the PC to index into pht
   return pht[index] >> 1;
 }
@@ -144,17 +147,17 @@ void init_tournament() {
     init_gshare();
     lhrSize = 1 << pcIndexBits;
     lhr = (uint32_t*)malloc(sizeof(uint32_t) * lhrSize);
-    for (int i = 0; i < LHR_size; i++) {
+    for (int i = 0; i < lhrSize; i++) {
         lhr[i] = NOTTAKEN;
     }
     lphtSize = 1 << lhistoryBits;
     lpht = (uint32_t*)malloc(sizeof(uint32_t) * lphtSize);
-    for (int i = 0; i < LPHT_size; i++) {
+    for (int i = 0; i < lphtSize; i++) {
         lpht[i] = WN;
     }
     cpht = (uint32_t*)malloc(sizeof(uint32_t) * gsize);
     for (int i = 0; i < gsize; i++) {
-        CPHT[i] = WN;
+        cpht[i] = WN;
     }
 }
 
