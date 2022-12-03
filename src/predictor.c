@@ -11,9 +11,9 @@
 //
 // TODO:Student Information
 //
-const char *studentName = "Tina Jin";
-const char *studentID   = "A14463292";
-const char *email       = "dojin@ucsd.edu";
+const char *studentName = "Ryan Dong";
+const char *studentID   = "A59018151";
+const char *email       = "rudong@ucsd.edu";
 
 //------------------------------------//
 //      Predictor Configuration       //
@@ -39,6 +39,12 @@ uint32_t lsb;
 // gshare
 uint32_t ghr;
 uint8_t *pht;
+// tournament
+uint32_t* lhr;            // local history register
+uint32_t lhrSize;       // size of local history register
+uint32_t* lpht;            // local pattern history table
+uint32_t lphtSize;      // size of local pattern history table
+uint32_t* cpht;          // choice pattern history table
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -56,6 +62,7 @@ init_predictor()
     case GSHARE:
       return init_gshare();
     case TOURNAMENT:
+      return init_tournament();
     case CUSTOM:
     default:
       break;
@@ -78,6 +85,7 @@ uint8_t make_prediction(uint32_t pc) {
     case GSHARE:
       return pred_gshare(pc);
     case TOURNAMENT:
+      return pred_tournament(pc);
     case CUSTOM:
     default:
       break;
@@ -96,6 +104,7 @@ void train_predictor(uint32_t pc, uint8_t outcome) {
     case GSHARE:
       return train_gshare(pc, outcome);
     case TOURNAMENT:
+        return train_tournament(pc, outcome);
     case CUSTOM:
     default:
       break;
@@ -103,6 +112,7 @@ void train_predictor(uint32_t pc, uint8_t outcome) {
 }
 
 // Helper functions to be called for each type of predictor
+// gshare
 void init_gshare() {
   ghr = 0;
   pht = (uint8_t *) malloc(sizeof(uint8_t) * gsize);
@@ -126,4 +136,78 @@ void train_gshare(uint32_t pc, uint8_t outcome) {
     if (currP != 0)
       pht[index] -= 1;
   }
+}
+
+// tournament
+void init_tournament() {
+    init_gshare();
+    lhrSize = 1 << pcIndexBits;
+    lhr = (uint32_t*)malloc(sizeof(uint32_t) * lhrSize);
+    for (int i = 0; i < LHR_size; i++) {
+        lhr[i] = NOTTAKEN;
+    }
+    lphtSize = 1 << lhistoryBits;
+    lpht = (uint32_t*)malloc(sizeof(uint32_t) * lphtSize);
+    for (int i = 0; i < LPHT_size; i++) {
+        lpht[i] = WN;
+    }
+    cpht = (uint32_t*)malloc(sizeof(uint32_t) * gsize);
+    for (int i = 0; i < gsize; i++) {
+        CPHT[i] = WN;
+    }
+}
+
+uint8_t pred_local(uint32_t pc) {
+    uint32_t  LSB = pc & (lhrSize - 1);  // least significant bits of pc
+    uint32_t branchHistory = lhr[LSB];
+    if (lpht[branchHistory] >= WT) return TAKEN;
+    else  return NOTTAKEN;
+}
+
+uint8_t pred_global(uint32_t pc) {
+    uint32_t phtIndex = ghr & (gsize - 1);  // least significant bits of pc
+    if (pht[phtIndex] >= WT)  return TAKEN;
+    else  return NOTTAKEN;
+}
+
+uint8_t pred_tournament(uint32_t pc) {
+    uint32_t predSelection = cpht[ghr];
+    if (predSelection <= WN) {
+        return pred_global(pc);
+    }
+    else {
+        return pred_local(pc);
+    }
+}
+
+void train_tournament(uint32_t pc, uint8_t outcome) {
+    // choice selector
+    uint32_t globalOutcome = pred_global(pc);
+    uint32_t localOutcome = pred_local(pc);
+    if (globalOutcome != localOutcome) {
+        if (globalOutcome == outcome && cpht[ghr] != 0) {
+            cpht[ghr]--;
+        }
+        if (localOutcome == outcome && cpht[ghr] != 3) {
+            cpht[ghr]++;
+        }
+    }
+    // gshare predictor
+    if (outcome) {
+        if (pht[ghr] != 3) pht[ghr]++;
+    }
+    else {
+        if (pht[ghr] != 0) pht[ghr]--;
+    }
+    // local predictor
+    uint32_t LSB = pc & (lhrSize - 1);  // least significant bits of pc
+    uint32_t lphtIndex = lhr[LSB];
+    if (outcome) {
+        if (lpht[lphtIndex] != 3) lpht[lphtIndex]++;
+    }
+    else {
+        if (lpht[lphtIndex] != 0) lpht[lphtIndex]--;
+    }
+    ghr = (ghr << 1 | outcome) & lsb;
+    lhr[LSB] = (lhr[LSB] << 1 | outcome) & (lphtSize - 1);
 }

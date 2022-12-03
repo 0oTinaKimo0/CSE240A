@@ -1,5 +1,6 @@
 CC=gcc
 OPTS=-g -std=c99 -Werror
+SHELL=cmd.exe
 
 all: main.o predictor.o
 	$(CC) $(OPTS) -lm -o predictor main.o predictor.o
