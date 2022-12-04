@@ -120,7 +120,9 @@ void train_predictor(uint32_t pc, uint8_t outcome) {
 void init_gshare() {
   ghr = 0;
   pht = (uint8_t *) malloc(sizeof(uint8_t) * gsize);
-  memset(pht, 1, gsize); // all entries in the pht are initialized to 01 (WN)
+  for (int i = 0; i < gsize; i++) {
+    pht[i] = WN; // all entries in the pht are initialized to 01 (WN)
+  }
 }
 
 uint8_t pred_gshare(uint32_t pc) {
@@ -134,11 +136,10 @@ void train_gshare(uint32_t pc, uint8_t outcome) {
   // update pht by incrementing or decrementing the 2-bit counter
   uint8_t currP = pht[index];
   if (outcome) {
-    if (currP != 3)
-      pht[index] += 1;
-  } else {
-    if (currP != 0)
-      pht[index] -= 1;
+    if (pht[index] != 3) pht[ghr]++;
+  }
+  else {
+    if (pht[index] != 0) pht[ghr]--;
   }
 }
 
