@@ -48,13 +48,13 @@ uint32_t* cpht;          // choice pattern history table
 // custom - yeh-patt
 // uint8_t* ypht;
 
-// void init_gshare();
-// uint8_t pred_gshare(uint32_t pc);
-// void train_gshare(uint32_t pc, uint8_t outcome);
+void init_gshare();
+uint8_t pred_gshare(uint32_t pc);
+void train_gshare(uint32_t pc, uint8_t outcome);
 
-// void init_tournament();
-// uint8_t pred_tournament(uint32_t pc);
-// void train_tournament(uint32_t pc, uint8_t outcome);
+void init_tournament();
+uint8_t pred_tournament(uint32_t pc);
+void train_tournament(uint32_t pc, uint8_t outcome);
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -65,12 +65,12 @@ uint32_t* cpht;          // choice pattern history table
 void init_predictor() {
   gsize = 1 << ghistoryBits;
   lsb = gsize - 1;
-  
+
   switch (bpType) {
     case GSHARE:
-      return init_gshare();
+      init_gshare();
     case TOURNAMENT:
-      return init_tournament();
+      init_tournament();
     //case CUSTOM:
     default:
       break;
@@ -106,9 +106,9 @@ uint8_t make_prediction(uint32_t pc) {
 void train_predictor(uint32_t pc, uint8_t outcome) {
   switch (bpType) {
     case GSHARE:
-      return train_gshare(pc, outcome);
+      train_gshare(pc, outcome);
     case TOURNAMENT:
-        return train_tournament(pc, outcome);
+      train_tournament(pc, outcome);
     //case CUSTOM:
     default:
       break;
@@ -131,7 +131,7 @@ uint8_t pred_gshare(uint32_t pc) {
 }
 
 void train_gshare(uint32_t pc, uint8_t outcome) {
-  ghr = (ghr << 1 | outcome) & lsb; // update global history register to be the new outcome 
+  ghr = (ghr << 1 | outcome) & lsb; // update global history register to be the new outcome
   uint32_t index = (ghr ^ pc) & lsb;
   // update pht by incrementing or decrementing the 2-bit counter
   uint8_t currP = pht[index];
