@@ -6,6 +6,7 @@
 //  described in the README                               //
 //========================================================//
 #include <stdio.h>
+#include <string.h>
 #include "predictor.h"
 
 //
@@ -50,6 +51,16 @@ uint32_t* cpht;          // choice pattern history table
 //        Predictor Functions         //
 //------------------------------------//
 
+// Declaration
+void init_gshare();
+void init_tournament();
+
+uint8_t pred_gshare(uint32_t pc);
+uint8_t pred_tournament(uint32_t pc);
+
+void train_gshare(uint32_t pc, uint8_t outcome);
+void train_tournament(uint32_t pc, uint8_t outcome);
+
 // Initialize the predictor
 //
 void
@@ -60,9 +71,9 @@ init_predictor()
   
   switch (bpType) {
     case GSHARE:
-      return init_gshare();
+      init_gshare();
     case TOURNAMENT:
-      return init_tournament();
+      init_tournament();
     case CUSTOM:
     default:
       break;
@@ -102,9 +113,9 @@ uint8_t make_prediction(uint32_t pc) {
 void train_predictor(uint32_t pc, uint8_t outcome) {
   switch (bpType) {
     case GSHARE:
-      return train_gshare(pc, outcome);
+      train_gshare(pc, outcome);
     case TOURNAMENT:
-        return train_tournament(pc, outcome);
+        train_tournament(pc, outcome);
     case CUSTOM:
     default:
       break;
@@ -119,7 +130,7 @@ void init_gshare() {
   memset(pht, 1, gsize); // all entries in the pht are initialized to 01 (WN)
 }
 
-void pred_gshare(uint32_t pc) {
+uint8_t pred_gshare(uint32_t pc) {
   uint32_t index = (ghr ^ pc) & lsb; // global history register is xored with the PC to index into pht
   return pht[index] >> 1;
 }
@@ -143,17 +154,17 @@ void init_tournament() {
     init_gshare();
     lhrSize = 1 << pcIndexBits;
     lhr = (uint32_t*)malloc(sizeof(uint32_t) * lhrSize);
-    for (int i = 0; i < LHR_size; i++) {
+    for (int i = 0; i < lhrSize; i++) {
         lhr[i] = NOTTAKEN;
     }
     lphtSize = 1 << lhistoryBits;
     lpht = (uint32_t*)malloc(sizeof(uint32_t) * lphtSize);
-    for (int i = 0; i < LPHT_size; i++) {
+    for (int i = 0; i < lphtSize; i++) {
         lpht[i] = WN;
     }
     cpht = (uint32_t*)malloc(sizeof(uint32_t) * gsize);
     for (int i = 0; i < gsize; i++) {
-        CPHT[i] = WN;
+        cpht[i] = WN;
     }
 }
 
