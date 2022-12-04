@@ -131,15 +131,15 @@ uint8_t pred_gshare(uint32_t pc) {
 }
 
 void train_gshare(uint32_t pc, uint8_t outcome) {
-  ghr = (ghr << 1 | outcome) & lsb; // update global history register to be the new outcome
   uint32_t index = (ghr ^ pc) & lsb;
+  ghr = (ghr << 1 | outcome) & lsb; // update global history register to be the new outcome
   // update pht by incrementing or decrementing the 2-bit counter
   uint8_t currP = pht[index];
   if (outcome) {
-    if (pht[index] != 3) pht[ghr]++;
+    if (currP != 3) pht[index]++;
   }
   else {
-    if (pht[index] != 0) pht[ghr]--;
+    if (currP != 0) pht[index]--;
   }
 }
 
