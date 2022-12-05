@@ -45,8 +45,8 @@ uint32_t lhrSize;       // size of local history register
 uint32_t* lpht;            // local pattern history table
 uint32_t lphtSize;      // size of local pattern history table
 uint32_t* cpht;          // choice pattern history table
-// custom - yeh-patt
-// uint8_t* ypht;
+// custom
+
 
 void init_gshare();
 uint8_t pred_gshare(uint32_t pc);
@@ -55,6 +55,10 @@ void train_gshare(uint32_t pc, uint8_t outcome);
 void init_tournament();
 uint8_t pred_tournament(uint32_t pc);
 void train_tournament(uint32_t pc, uint8_t outcome);
+
+void init_custom();
+uint8_t pred_custom(uint32_t pc);
+void train_custom(uint32_t pc, uint8_t outcome);
 
 //------------------------------------//
 //        Predictor Functions         //
