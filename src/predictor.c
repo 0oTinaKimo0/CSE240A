@@ -6,7 +6,18 @@
 //  described in the README                               //
 //========================================================//
 #include <stdio.h>
+#include <string.h>
 #include "predictor.h"
+//------------------------------------------------//
+//    define for custom (perceptron) predictor    //
+//------------------------------------------------//
+#define N 32                        // length of ghr_c = number of weights
+#define Space   (64 * 1024)         // space budget is 64K
+#define theta   (N * 1.93 + 14)     // optimal threshold
+#define BitsInWeight    8           // bit-length of each weight
+#define MaxWeight       127
+#define MinWeight       -128
+#define EntryNumber     ((int)(Space / ((N + 1) * BitsInWeight)))   // number of entries in perceptron table
 
 //
 // TODO:Student Information
@@ -36,20 +47,25 @@ int verbose;
 // global
 uint32_t gsize;
 uint32_t lsb;
+
 // gshare
 uint32_t ghr;
 uint8_t* gpht;
+
 // tournament
 uint32_t* lhr;            // local history register
-uint32_t lhrSize;       // size of local history register
-uint32_t* lpht;            // local pattern history table
-uint32_t lphtSize;      // size of local pattern history table
-uint32_t* cpht;          // choice pattern history table
-// custom
-uint32_t* yht;            // branch history table
-uint32_t yhtSize;       // size of branch history table
-uint8_t* ylpht;            // local pattern history table
-uint32_t ylphtSize;      // size of local pattern history table
+uint32_t lhrSize;         // size of local history register
+uint32_t* lpht;           // local pattern history table
+uint32_t lphtSize;        // size of local pattern history table
+uint32_t* cpht;           // choice pattern history table
+
+// custom: perceptron
+int PT[EntryNumber][N];   // Perceptron Table
+int bias[EntryNumber];    // weight for constant number
+uint32_t ghr_c;           // global history register of custom predictor
+int indexPT;              // index into PT after hashing
+int y;                    // result of weight calculation
+uint8_t pred_c;           // result of prediction
 
 void init_gshare();
 uint8_t pred_gshare(uint32_t pc);
@@ -67,6 +83,19 @@ void train_custom(uint32_t pc, uint8_t outcome);
 //        Predictor Functions         //
 //------------------------------------//
 
+// Declaration
+void init_gshare();
+void init_tournament();
+void init_custom();
+
+uint8_t pred_gshare(uint32_t pc);
+uint8_t pred_tournament(uint32_t pc);
+uint8_t pred_custom(uint32_t pc);
+
+void train_gshare(uint32_t pc, uint8_t outcome);
+void train_tournament(uint32_t pc, uint8_t outcome);
+void train_custom(uint32_t pc, uint8_t outcome);
+
 // Initialize the predictor
 //
 void init_predictor() {
@@ -79,7 +108,7 @@ void init_predictor() {
     case TOURNAMENT:
       init_tournament();
     case CUSTOM:
-      init_custom();
+        init_custom();
     default:
       break;
   }
@@ -117,9 +146,9 @@ void train_predictor(uint32_t pc, uint8_t outcome) {
     case GSHARE:
       train_gshare(pc, outcome);
     case TOURNAMENT:
-      train_tournament(pc, outcome);
+        train_tournament(pc, outcome);
     case CUSTOM:
-      train_custom(pc, outcome);
+        train_custom(pc, outcome);
     default:
       break;
   }
@@ -227,34 +256,60 @@ void train_tournament(uint32_t pc, uint8_t outcome) {
     lhr[LSB] = (lhr[LSB] << 1 | outcome) & (lphtSize - 1);
 }
 
+// custom: perceptron
 void init_custom() {
-  yhtSize = 1 << pcIndexBits;
-  yht = (uint32_t*)malloc(sizeof(uint32_t) * yhtSize);
-  for (int i = 0; i < yhtSize; i++) {
-      yht[i] = NOTTAKEN;
-  }
-  ylphtSize = 1 << lhistoryBits;
-  ylpht = (uint8_t *) malloc(sizeof(uint8_t) * ylphtSize);
-  for (int i = 0; i < ylphtSize; i++) {
-    ylpht[i] = WT; // all entries in the pht are initialized to 10 (WT)
-  }
+    ghr_c = 0;
+    for (int i = 0; i < EntryNumber; i++) {
+        bias[i] = 0;
+        for (int j = 0; j < N; j++) {
+            PT[i][j] = 0;
+        }
+    }
 }
 
 uint8_t pred_custom(uint32_t pc) {
-  uint32_t indexh = pc & (yhtSize - 1);
-  uint32_t indexp = yht[indexh];
-  return ylpht[indexp] >> 1;
+    int w, x; // w: weight, x: history
+    indexPT = pc % EntryNumber; // hash pc into index
+    y = bias[indexPT]; // add bias to y
+    int mask = 1;
+    // calculate correlation between current branch and history
+    for (int i = 0; i < N; i++) {
+        w = PT[indexPT][i];
+        if ((ghr_c & mask) == 0) x = -1; // NOTTAKEN
+        else x = 1; // TAKEN
+        y += w * x;
+        mask = mask << 1;
+    }
+    if (y > 0) pred_c = TAKEN;
+    else pred_c = NOTTAKEN;
+    return pred_c;
 }
 
 void train_custom(uint32_t pc, uint8_t outcome) {
-  uint32_t indexh = pc & (yhtSize - 1);
-  uint32_t indexp = yht[indexh];
-  yht[indexh] = yht[indexh] >> 1;
-  uint8_t currP = ylpht[indexp];
-  if (outcome) {
-    if (currP != 3) ylpht[indexp]++;
-  }
-  else {
-    if (currP != 0) ylpht[indexp]--;
-  }
+    int x;
+    int mask = 1;
+    if ((y <= theta && y >= ((-1) * theta)) || pred_c != outcome) {
+        // train bias
+        if (bias[indexPT] < MaxWeight && bias[indexPT] > MinWeight) {
+            if (outcome == 1) bias[indexPT] += 1;
+            else bias[indexPT] += -1;
+        }
+
+        // train weights
+        for (int i = 0; i < N; i++) {
+            // check correlation
+            if ((((ghr_c & mask) == 0) && (outcome == 0)) || (((ghr_c & mask) != 0) && (outcome == 1))) {
+                x = 1; // positive
+            }
+            else {
+                x = -1; // negative
+            }
+            // for current index update weight
+            if (PT[indexPT][i] > MinWeight && PT[indexPT][i] < MaxWeight) {
+                PT[indexPT][i] += x;
+            }
+            mask = mask << 1;
+        }        
+    }
+    ghr_c = (ghr_c << 1) | outcome;
 }
