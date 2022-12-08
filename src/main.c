@@ -28,7 +28,7 @@ usage()
   fprintf(stderr,"    static\n"
                  "    gshare:<# ghistory>\n"
                  "    tournament:<# ghistory>:<# lhistory>:<# index>\n"
-                 "    custom:<# index>:<# lhistory>\n");
+                 "    custom\n");
 }
 
 // Process an option and update the predictor
@@ -47,9 +47,8 @@ handle_option(char *arg)
   } else if (!strncmp(arg,"--tournament:",13)) {
     bpType = TOURNAMENT;
     sscanf(arg+13,"%d:%d:%d", &ghistoryBits, &lhistoryBits, &pcIndexBits);
-  } else if (!strncmp(arg,"--custom:",9)) {
+  } else if (!strcmp(arg,"--custom")) {
     bpType = CUSTOM;
-    sscanf(arg+13,"%d:%d", &pcIndexBits, &lhistoryBits);
   } else if (!strcmp(arg,"--verbose")) {
     verbose = 1;
   } else {
